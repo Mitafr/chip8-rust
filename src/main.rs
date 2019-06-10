@@ -21,9 +21,9 @@ use std::io::Write;
 struct Chip8 {
     chip: Cpu,
     mem: Memory,
+    rom: String,
     gfx: Gfx,
     context: sdl2::Sdl,
-    rom: String
 }
 
 impl Chip8 {
@@ -32,21 +32,17 @@ impl Chip8 {
         Chip8 {
             chip: Cpu::new(),
             mem: Memory::new(),
+            rom: rom,
             gfx: Gfx::new(&sdl_context, "Test"),
             context: sdl_context,
-            rom: rom
         }
     }
-    fn init(&mut self) {
-        self.mem.load_rom(&self.rom);
+    fn init(&mut self) -> Result<(), String> {
+        self.mem.load_rom(&self.rom)?;
         println!("{}", self.mem);
-        let exemple: u16 = 0xA2 << 8 | 0xF0;
-        println!("");
-        println!("{:x?}", exemple);
-        let res: u16 = exemple & 0x0FFF;
-        println!("{:x?}", res);
         self.gfx.clear();
         self.gfx.update();
+        Ok(())
     }
     fn run(&mut self) -> Result<(), String> {
         let sleep_duration = Duration::from_millis(16);
@@ -64,6 +60,7 @@ impl Chip8 {
                     _ => {}
                 }
             }
+            self.chip.emulate(&self.mem);
             self.gfx.draw_rect(32, 16, 1)?;
             self.gfx.update();
             thread::sleep(sleep_duration);
@@ -74,8 +71,13 @@ impl Chip8 {
 
 fn main() -> Result<(), String> {
     let args: Vec<String> = env::args().collect();
-    let mut chip8: Chip8 = Chip8::new(args[1].clone());
-    chip8.init();
+    println!("{}", args.len());
+    let mut chip8: Chip8;
+    if args.len() > 1 {
+        chip8 = Chip8::new(args[1].clone());
+    }
+    chip8 = Chip8::new(String::from("roms/TETRIS"));
+    chip8.init()?;
     chip8.run()?;
     Ok(())
 }

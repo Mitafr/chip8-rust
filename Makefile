@@ -52,7 +52,7 @@ TARGET = $(shell rustc --version --verbose 2> /dev/null | awk "/host:/ { print \
 # TARGET = x86_64-unknown-linux-gnu
 # TARGET = x86_64-apple-darwin
 
-TARGET_LIB_DIR = target/deps/
+TARGET_LIB_DIR = target/debug/deps/
 
 EXE_FILE = $(shell (rustc --crate-type=bin --print-file-name "$(EXE_ENTRY_FILE)" 2> /dev/null) || (echo "main"))
 EXE_DIR = bin

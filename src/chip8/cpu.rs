@@ -1,4 +1,7 @@
 use crate::chip8::memory::Memory;
+extern crate rand;
+
+use rand::Rng;
 
 pub struct Cpu {
     registers: [u8; 16],
@@ -44,11 +47,26 @@ impl Cpu {
                 self.stack.push(self.pc as u16);
                 self.pc = decoded as usize;
             },
+            0x3000 => {
+                let x: usize = ((opcode & 0x0F00) >> 8) as usize;
+                let kk: u8 = (opcode & 0x00FF) as u8;
+                if self.registers[x] == kk {
+                    self.pc += 2;
+                }
+            },
             0x6000 => {
                 let x: usize = ((opcode & 0x0F00) >> 8) as usize;
                 self.registers[x] = (opcode & 0x00FF) as u8;
                 self.pc += 2;
             },
+            0xC000 => {
+                let mut rng = rand::thread_rng();
+                let x: usize = ((opcode & 0x0F00) >> 8) as usize;
+                let kk: u8 = (opcode & 0x00FF) as u8;
+                let random: u8 = rng.gen_range(0, 255);
+                self.registers[x] = random & kk;
+                self.pc += 2;
+            }
             0x0000 => {
                 match opcode {
                     0x00EE => {

@@ -75,8 +75,9 @@ fn main() -> Result<(), String> {
     let mut chip8: Chip8;
     if args.len() > 1 {
         chip8 = Chip8::new(args[1].clone());
+    } else {
+        chip8 = Chip8::new(String::from("roms/MAZE.ch8"));
     }
-    chip8 = Chip8::new(String::from("roms/TETRIS"));
     chip8.init()?;
     chip8.run()?;
     Ok(())

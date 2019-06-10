@@ -1,5 +1,5 @@
-mod cpu;
+mod chip8;
 mod memory;
 
-pub use self::cpu::Cpu;
+pub use self::chip8::Chip8;
 pub use self::memory::Memory;

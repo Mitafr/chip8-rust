@@ -2,17 +2,17 @@ use sdl2;
 use sdl2::render::Canvas;
 use sdl2::pixels;
 use sdl2::video::Window;
-use sdl2::rect::{Point, Rect};
+use sdl2::rect::{Rect};
 
 use std::fmt;
 
 const SCREEN_WIDTH: u32 = 64;
 const SCREEN_HEIGHT: u32 = 32;
-const SCALE: u32 = 10;
+const SCALE: u32 = 5;
 
 pub struct Gfx {
     renderer: Canvas<Window>,
-    pub display: [[u8; SCREEN_WIDTH as usize]; SCREEN_HEIGHT as usize],
+    pub display: [[u8; SCREEN_HEIGHT as usize]; SCREEN_WIDTH as usize],
 }
 
 impl Gfx {
@@ -28,7 +28,7 @@ impl Gfx {
         let canvas = window.into_canvas().build().map_err(|e| e.to_string()).unwrap();
         Gfx {
             renderer: canvas,
-            display: [[0; SCREEN_WIDTH as usize]; SCREEN_HEIGHT as usize]
+            display: [[0; SCREEN_HEIGHT as usize]; SCREEN_WIDTH as usize]
         }
     }
     pub fn update(&mut self) {
@@ -37,25 +37,22 @@ impl Gfx {
     pub fn set_pixel(&mut self, x: u32, y: u32, pixel: u8) {
         self.display[x as usize][y as usize] = pixel;
     }
-    pub fn draw_screen(&mut self) {
+    pub fn draw_screen(&mut self) -> Result<(), String> {
         self.renderer.set_draw_color(color(false));
-        for x in 0..SCREEN_WIDTH {
-            for y in 0..SCREEN_HEIGHT {
-                if self.display[y as usize][x as usize] != 0 {
-                    self.renderer.fill_rect(Rect::new(((x as u32) * SCALE) as i32, ((y as u32) * SCALE) as i32, SCALE, SCALE));
+        for y in 0..SCREEN_HEIGHT {
+            for x in 0..SCREEN_WIDTH {
+                if self.display[x as usize][y as usize] != 0 {
+                    self.renderer.fill_rect(Rect::new(((x as u32) * SCALE) as i32, ((y as u32) * SCALE) as i32, SCALE, SCALE))?;
                 }
             }
         }
         self.renderer.present();
-    }
-    pub fn draw_rect(&mut self, x: u32, y: u32, h: u32) -> Result<(), String> {
-        self.renderer.set_draw_color(color(false));
-        self.renderer.fill_rect(Rect::new((x * SCALE) as i32, (y * SCALE) as i32, 8 * SCALE, h * SCALE))
+        Ok(())
     }
     pub fn clear(&mut self) {
-        for x in 0..SCREEN_WIDTH {
-            for y in 0..SCREEN_HEIGHT {
-                self.display[y as usize][x as usize] = 0;
+        for y in 0..SCREEN_HEIGHT {
+            for x in 0..SCREEN_WIDTH {
+                self.display[x as usize][y as usize] = 0;
             }
         }
     }

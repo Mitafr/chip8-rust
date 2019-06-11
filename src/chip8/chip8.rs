@@ -141,15 +141,23 @@ impl Chip8 {
             }
             0xD000 => {
                 let n: u8 = (opcode & 0x000F) as u8;
-                let y = (opcode & 0x00F0) >> 4;
                 let x = (opcode & 0x0F00) >> 8;
-                let mut byte: u8;
-                let mut i: usize = 0;
-                while i < n as usize {
-                    byte = self.mem.mem[self.index_register as usize  + i];
-                    self.gfx.set_pixel(x as u32, y as u32, byte);
-                    self.gfx.draw_screen();
-                    i += 1;
+                let y = (opcode & 0x00F0) >> 4;
+                let mut pixel: u8;
+                for i in 0..n {
+                    pixel = self.mem.mem[self.index_register as usize + i as usize];
+                    for j in 0..7 {
+                        let coordx = self.registers[x as usize];
+                        let coordy = self.registers[y as usize];
+                        if (pixel & (0x80 >> j)) != 0 {
+                            self.gfx.set_pixel((coordx + j) as u32, ((coordy as u16 + i as u16)) as u32, pixel);
+                        }
+                    }
+                }
+                let r = self.gfx.draw_screen();
+                match r {
+                    Ok(()) => {},
+                    Err(err) => panic!("Erreur de rendu : {}", err)
                 }
                 self.pc += 2;
             },

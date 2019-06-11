@@ -65,6 +65,12 @@ impl Chip8 {
                 }
             }
             self.emulate();
+            while self.delay_timer > 0 {
+                self.delay_timer -= 1;
+            }
+            while self.sound_timer > 0 {
+                self.sound_timer -= 1;
+            }
             thread::sleep(sleep_duration);
         }
         Ok(())
@@ -81,6 +87,7 @@ impl Chip8 {
     }
     pub fn execute_op(&mut self, opcode: u16) {
         let decoded: u16 = self.decode_op(opcode);
+        println!("{:x?}", opcode);
         match opcode & 0xf000 {
             0xA000 => {
                 self.index_register = decoded;
@@ -88,7 +95,6 @@ impl Chip8 {
             },
             0x1000 => {
                 self.pc = decoded as usize;
-                //println!("{}", self.pc);
             },
             0x2000 => {
                 self.stack.push(self.pc as u16);
@@ -126,10 +132,17 @@ impl Chip8 {
                 self.pc += 2;
             },
             0x8000 => {
-                let x: usize = ((opcode & 0x0F00) >> 8) as usize;
-                let y: usize = ((opcode & 0x00F0) >> 4) as usize;
-                self.registers[x] = self.registers[y];
-                self.pc += 2;
+                match opcode & 0x000F {
+                    0x0000 => {
+                        let x: usize = ((opcode & 0x0F00) >> 8) as usize;
+                        let y: usize = ((opcode & 0x00F0) >> 4) as usize;
+                        self.registers[x] = self.registers[y];
+                        self.pc += 2;
+                    }
+                    _ => {
+                        println!("unrecognized opcode : {:x?}", opcode & 0x000f);
+                    }
+                }
             },
             0xC000 => {
                 let mut rng = rand::thread_rng();
@@ -144,12 +157,16 @@ impl Chip8 {
                 let x = (opcode & 0x0F00) >> 8;
                 let y = (opcode & 0x00F0) >> 4;
                 let mut pixel: u8;
+                self.registers[0xF] = 0;
                 for i in 0..n {
                     pixel = self.mem.mem[self.index_register as usize + i as usize];
                     for j in 0..7 {
                         let coordx = self.registers[x as usize];
                         let coordy = self.registers[y as usize];
                         if (pixel & (0x80 >> j)) != 0 {
+                            if self.gfx.display[(coordx + j) as usize][((coordy as u16 + i as u16)) as usize] == 1 {
+                                self.registers[0xF] = 1;
+                            }
                             self.gfx.set_pixel((coordx + j) as u32, ((coordy as u16 + i as u16)) as u32, pixel);
                         }
                     }
@@ -163,6 +180,21 @@ impl Chip8 {
             },
             0xF000 => {
                 match opcode & 0x00FF {
+                    0x0007 => {
+                        let x: usize = ((opcode & 0x0F00) >> 8) as usize;
+                        self.registers[x] = self.delay_timer;
+                        self.pc += 2;
+                    }
+                    0x0015 => {
+                        let x: usize = ((opcode & 0x0F00) >> 8) as usize;
+                        self.delay_timer = self.registers[x];
+                        self.pc += 2;
+                    }
+                    0x0018 => {
+                        let x: usize = ((opcode & 0x0F00) >> 8) as usize;
+                        self.sound_timer = self.registers[x];
+                        self.pc += 2;
+                    }
                     0x0029 => {
                         let x: usize = ((opcode & 0x0F00) >> 8) as usize;
                         self.index_register = (self.registers[x] as u16) * 5;
@@ -189,7 +221,14 @@ impl Chip8 {
                         }
                         self.pc += 2;
                     },
-                    _ => {}
+                    0x001e => {
+                        let x: usize = ((opcode & 0x0F00) >> 8) as usize;
+                        self.index_register += self.registers[x] as u16;
+                        self.pc += 2;
+                    }  
+                    _ => {
+                        println!("unrecognized opcode : {:x?}", opcode & 0xffff);
+                    }
                 }
             },
             0x0000 => {
@@ -201,7 +240,9 @@ impl Chip8 {
                         self.gfx.clear();
                         self.pc += 2;
                     },
-                    _ => {}
+                    _ => {
+                        println!("unrecognized opcode : {:x?}", opcode & 0xf000);
+                    }
                 }
             }
             _ => {

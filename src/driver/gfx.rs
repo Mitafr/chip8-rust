@@ -35,7 +35,7 @@ impl Gfx {
         self.renderer.present();
     }
     pub fn set_pixel(&mut self, x: u32, y: u32, pixel: u8) {
-        self.display[x as usize][y as usize] = pixel;
+        self.display[x as usize][y as usize] ^= 1;
     }
     pub fn draw_screen(&mut self) -> Result<(), String> {
         self.renderer.set_draw_color(color(false));

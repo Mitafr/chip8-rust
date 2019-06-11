@@ -1,17 +1,16 @@
 use crate::chip8::memory::Memory;
+use crate::chip8::keys::Keys;
 use crate::driver::gfx::Gfx;
 extern crate rand;
 
 use rand::Rng;
 
 use sdl2::event::Event;
+use sdl2::EventPump;
 use sdl2::keyboard::Keycode;
 
 use std::time::Duration;
 use std::thread;
-use std::fs;
-use std::io;
-use std::io::Write;
 
 pub struct Chip8 {
     registers: [u8; 16],
@@ -24,11 +23,13 @@ pub struct Chip8 {
     gfx: Gfx,
     context: sdl2::Sdl,
     index_register: u16,
+    events: EventPump,
 }
 
 impl Chip8 {
     pub fn new(rom: String) -> Chip8 {
         let sdl_context: sdl2::Sdl = sdl2::init().unwrap();
+        let mut events: EventPump = sdl_context.event_pump().unwrap();
         Chip8 {
             registers: [0; 16],
             delay_timer: 0,
@@ -40,6 +41,7 @@ impl Chip8 {
             rom: rom,
             gfx: Gfx::new(&sdl_context, "Test"),
             context: sdl_context,
+            events: events
         }
     }
     pub fn init(&mut self) -> Result<(), String> {
@@ -51,9 +53,8 @@ impl Chip8 {
 
     pub fn run(&mut self) -> Result<(), String> {
         let sleep_duration = Duration::from_millis(16);
-        let mut events = self.context.event_pump()?;
         'main: loop {
-            for event in events.poll_iter() {
+            for event in self.events.poll_iter() {
                 match event {
                     Event::Quit {..} => break 'main,
                     Event::KeyDown {keycode: Some(keycode), ..} => {
@@ -89,10 +90,6 @@ impl Chip8 {
         let decoded: u16 = self.decode_op(opcode);
         println!("{:x?}", opcode);
         match opcode & 0xf000 {
-            0xA000 => {
-                self.index_register = decoded;
-                self.pc += 2;
-            },
             0x1000 => {
                 self.pc = decoded as usize;
             },
@@ -139,11 +136,99 @@ impl Chip8 {
                         self.registers[x] = self.registers[y];
                         self.pc += 2;
                     }
+                    0x0001 => {
+                        let x: usize = ((opcode & 0x0F00) >> 8) as usize;
+                        let y: usize = ((opcode & 0x00F0) >> 4) as usize;
+                        self.registers[x] |= self.registers[y];
+                        self.pc += 2;
+                    }
+                    0x0002 => {
+                        let x: usize = ((opcode & 0x0F00) >> 8) as usize;
+                        let y: usize = ((opcode & 0x00F0) >> 4) as usize;
+                        self.registers[x] &= self.registers[y];
+                        self.pc += 2;
+                    }
+                    0x0003 => {
+                        let x: usize = ((opcode & 0x0F00) >> 8) as usize;
+                        let y: usize = ((opcode & 0x00F0) >> 4) as usize;
+                        self.registers[x] ^= self.registers[y];
+                        self.pc += 2;
+                    }
+                    0x0004 => {
+                        let x: usize = ((opcode & 0x0F00) >> 8) as usize;
+                        let y: usize = ((opcode & 0x00F0) >> 4) as usize;
+                        let r: u16 = self.registers[x] as u16 + self.registers[y] as u16;
+                        if r > 255 {
+                            self.registers[0xF] = 1;
+                        } else {
+                            self.registers[0xF] = 0;
+                        }
+                        self.registers[x] = r as u8;
+                        self.pc += 2;
+                    }
+                    0x0005 => {
+                        let x: usize = ((opcode & 0x0F00) >> 8) as usize;
+                        let y: usize = ((opcode & 0x00F0) >> 4) as usize;
+                        if self.registers[x] > self.registers[y] {
+                            self.registers[0xF] = 1;
+                        } else {
+                            self.registers[0xF] = 0;
+                        }
+                        self.registers[x] -= self.registers[y];
+                        self.pc += 2;
+                    }
+                    0x0006 => {
+                        let x: usize = ((opcode & 0x0F00) >> 8) as usize;
+                        if (self.registers[x] & 0x01) == 0x01 {
+                            self.registers[0xF] = 1;
+                        } else {
+                            self.registers[0xF] = 0;
+                        }
+                        self.registers[x] /= 2;
+                        self.pc += 2;
+                    }
+                    0x0007 => {
+                        let x: usize = ((opcode & 0x0F00) >> 8) as usize;
+                        let y: usize = ((opcode & 0x00F0) >> 4) as usize;
+                        if self.registers[y] > self.registers[x] {
+                            self.registers[0xF] = 1;
+                        } else {
+                            self.registers[0xF] = 0;
+                        }
+                        self.registers[x] -= self.registers[y];
+                        self.pc += 2;
+                    }
+                    0x000E => {
+                        let x: usize = ((opcode & 0x0F00) >> 8) as usize;
+                        if (self.registers[x] & 0x01) == 0x01 {
+                            self.registers[0xF] = 1;
+                        } else {
+                            self.registers[0xF] = 0;
+                        }
+                        self.registers[x] *= 2;
+                        self.pc += 2;
+                    }
                     _ => {
                         println!("unrecognized opcode : {:x?}", opcode & 0x000f);
                     }
                 }
             },
+            0x9000 => {
+                let x: usize = ((opcode & 0x0F00) >> 8) as usize;
+                let y: usize = ((opcode & 0x00F0) >> 4) as usize;
+                self.pc += match  self.registers[x] != self.registers[y] {
+                    true => 4,
+                    false => 2,
+                }
+            }
+            0xA000 => {
+                self.index_register = decoded;
+                self.pc += 2;
+            },
+            0xB000 => {
+                self.index_register = decoded;
+                self.pc += 2;
+            }
             0xC000 => {
                 let mut rng = rand::thread_rng();
                 let x: usize = ((opcode & 0x0F00) >> 8) as usize;
@@ -178,6 +263,18 @@ impl Chip8 {
                 }
                 self.pc += 2;
             },
+            0xE000 => {
+                match opcode & 0x00FF {
+                    0x009E => {
+                        let code: Keycode = self.events.keyboard_state().pressed_scancodes().filter_map(Keycode::from_scancode).collect();
+                    }
+                    0x00A1 => {
+                        let code: Keycode = self.events.keyboard_state().pressed_scancodes().filter_map(Keycode::from_scancode).collect();
+                        println!("keys:{}", code == sdl2::keyboard::Keycode::from_i32(Keys::Key1 as i32).unwrap());
+                    }
+                    _ => {}
+                }
+            }
             0xF000 => {
                 match opcode & 0x00FF {
                     0x0007 => {

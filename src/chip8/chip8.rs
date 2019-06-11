@@ -1,5 +1,4 @@
 use crate::chip8::memory::Memory;
-use crate::chip8::keys::Keys;
 use crate::driver::gfx::Gfx;
 extern crate rand;
 
@@ -24,6 +23,7 @@ pub struct Chip8 {
     context: sdl2::Sdl,
     index_register: u16,
     events: EventPump,
+    key: [bool; 16],
 }
 
 impl Chip8 {
@@ -41,7 +41,8 @@ impl Chip8 {
             rom: rom,
             gfx: Gfx::new(&sdl_context, "Test"),
             context: sdl_context,
-            events: events
+            events: events,
+            key: [false; 16],
         }
     }
     pub fn init(&mut self) -> Result<(), String> {
@@ -58,8 +59,34 @@ impl Chip8 {
                 match event {
                     Event::Quit {..} => break 'main,
                     Event::KeyDown {keycode: Some(keycode), ..} => {
-                        if keycode == Keycode::Escape {
-                            break 'main
+                        match keycode {
+                            Keycode::Escape => break 'main,
+                            Keycode::A => self.key[0] = true,
+                            Keycode::Z => self.key[1] = true,
+                            Keycode::E => self.key[2] = true,
+                            Keycode::R => self.key[3] = true,
+                            Keycode::T => self.key[4] = true,
+                            Keycode::Y => self.key[5] = true,
+                            Keycode::U => self.key[6] = true,
+                            Keycode::I => self.key[7] = true,
+                            Keycode::O => self.key[8] = true,
+                            Keycode::P => self.key[9] = true,
+                            _ => {}
+                        }
+                    }
+                    Event::KeyUp {keycode: Some(keycode), ..} => {
+                        match keycode {
+                            Keycode::A => self.key[0] = false,
+                            Keycode::Z => self.key[1] = false,
+                            Keycode::E => self.key[2] = false,
+                            Keycode::R => self.key[3] = false,
+                            Keycode::T => self.key[4] = false,
+                            Keycode::Y => self.key[5] = false,
+                            Keycode::U => self.key[6] = false,
+                            Keycode::I => self.key[7] = false,
+                            Keycode::O => self.key[8] = false,
+                            Keycode::P => self.key[9] = false,
+                            _ => {}
                         }
                     }
                     _ => {}
@@ -266,11 +293,18 @@ impl Chip8 {
             0xE000 => {
                 match opcode & 0x00FF {
                     0x009E => {
-                        let code: Keycode = self.events.keyboard_state().pressed_scancodes().filter_map(Keycode::from_scancode).collect();
+                        self.pc += 2;
+                        let x = (opcode & 0x0F00) >> 8;
+                        if self.key[x as usize] {
+                            self.pc += 2;
+                        }
                     }
                     0x00A1 => {
-                        let code: Keycode = self.events.keyboard_state().pressed_scancodes().filter_map(Keycode::from_scancode).collect();
-                        println!("keys:{}", code == sdl2::keyboard::Keycode::from_i32(Keys::Key1 as i32).unwrap());
+                        self.pc += 2;
+                        let x = (opcode & 0x0F00) >> 8;
+                        if !self.key[x as usize] {
+                            self.pc += 2;
+                        }
                     }
                     _ => {}
                 }

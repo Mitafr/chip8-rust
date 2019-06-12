@@ -71,6 +71,12 @@ impl Chip8 {
                             Keycode::I => self.key[7] = true,
                             Keycode::O => self.key[8] = true,
                             Keycode::P => self.key[9] = true,
+                            Keycode::Num0 => self.key[10] = true,
+                            Keycode::Num1 => self.key[11] = true,
+                            Keycode::Num2 => self.key[12] = true,
+                            Keycode::Num3 => self.key[13] = true,
+                            Keycode::Num4 => self.key[14] = true,
+                            Keycode::Num5 => self.key[15] = true,
                             _ => {}
                         }
                     }
@@ -86,6 +92,12 @@ impl Chip8 {
                             Keycode::I => self.key[7] = false,
                             Keycode::O => self.key[8] = false,
                             Keycode::P => self.key[9] = false,
+                            Keycode::Num0 => self.key[10] = false,
+                            Keycode::Num1 => self.key[11] = false,
+                            Keycode::Num2 => self.key[12] = false,
+                            Keycode::Num3 => self.key[13] = false,
+                            Keycode::Num4 => self.key[14] = false,
+                            Keycode::Num5 => self.key[15] = false,
                             _ => {}
                         }
                     }
@@ -278,6 +290,7 @@ impl Chip8 {
                         if (pixel & (0x80 >> j)) != 0 {
                             if self.gfx.display[(coordx + j) as usize][((coordy as u16 + i as u16)) as usize] == 1 {
                                 self.registers[0xF] = 1;
+                                println!("Collision");
                             }
                             self.gfx.set_pixel((coordx + j) as u32, ((coordy as u16 + i as u16)) as u32, pixel);
                         }

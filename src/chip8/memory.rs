@@ -1,3 +1,5 @@
+use crate::chip8::fonts::Fonts;
+
 use std::fs::File;
 use std::io::prelude::*;
 use std::fmt;
@@ -13,6 +15,10 @@ impl Memory {
         }
     }
     pub fn load_rom(&mut self, filename: &str) -> Result<(), String> {
+        let fonts: [u8; 5 * 16] = Fonts();
+        for i in 0..fonts.len() {
+            self.mem[i] = fonts[i];
+        }
         let f = File::open(filename).expect(&format!("file not found: {}", filename));
         for (i, byte) in f.bytes().enumerate() {
             self.mem[i + 512] = byte.unwrap();

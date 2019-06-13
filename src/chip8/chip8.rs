@@ -25,7 +25,7 @@ pub struct Chip8 {
     events: EventPump,
     key: [bool; 16],
     wait_for_key: bool,
-    key_in_register: u8,
+    key_in_register: usize,
     draw: bool,
 }
 
@@ -59,7 +59,7 @@ impl Chip8 {
     }
 
     pub fn run(&mut self) -> Result<(), String> {
-        let sleep_duration = Duration::from_millis(2);
+        let sleep_duration = Duration::from_millis(16);
         'main: loop {
             for event in self.events.poll_iter() {
                 match event {
@@ -111,7 +111,14 @@ impl Chip8 {
                 }
             }
             if !self.wait_for_key {
-                self.emulate();
+                let opcode = self.fetch_op();
+                self.execute_op(opcode);
+                while self.delay_timer > 0 {
+                    self.delay_timer -= 1;
+                }
+                while self.sound_timer > 0 {
+                    self.sound_timer -= 1;
+                }
             } else {
                 for i in 0..self.key.len() {
                     if self.key[i] {
@@ -127,20 +134,11 @@ impl Chip8 {
                     Ok(()) => {},
                     Err(err) => panic!("Erreur de rendu : {}", err)
                 }
-            }
-            while self.delay_timer > 0 {
-                self.delay_timer -= 1;
-            }
-            while self.sound_timer > 0 {
-                self.sound_timer -= 1;
+                self.draw = false;
             }
             thread::sleep(sleep_duration);
         }
         Ok(())
-    }
-    pub fn emulate(&mut self) {
-        let opcode: u16 = self.fetch_op();
-        self.execute_op(opcode);
     }
     pub fn fetch_op(&mut self) -> u16 {
         (self.mem.mem[self.pc] as u16) << 8 | (self.mem.mem[self.pc + 1] as u16)
@@ -157,8 +155,8 @@ impl Chip8 {
                 self.pc = (opcode & 0x0FFF) as usize;
             },
             0x2000 => {
-                self.stack.push(self.pc as u16);
-                self.pc = decoded as usize;
+                self.stack.push((self.pc + 2) as u16);
+                self.pc = (opcode & 0x0FFF) as usize;
             },
             0x3000 => {
                 let x: usize = ((opcode & 0x0F00) >> 8) as usize;
@@ -326,7 +324,7 @@ impl Chip8 {
                     0x000A => {
                         let x: u8 = ((opcode & 0x0F00) >> 8) as u8;
                         self.wait_for_key = true;
-                        self.key_in_register = x;
+                        self.key_in_register = x as usize;
                         self.pc -= 2;
                     },
                     0x0015 => {
@@ -356,15 +354,13 @@ impl Chip8 {
                         for i in 0..x + 1 {
                             self.mem.mem[self.index_register + i] = self.registers[i]
                         }
-                        self.index_register += (x + 1) as usize;
                         self.pc += 2;
                     },
                     0x0065 => {
                         let x: usize = ((opcode & 0x0F00) >> 8) as usize;
-                        for i in 0..x {
-                            self.registers[i] = self.mem.mem[i + 1];
+                        for i in 0..x + 1 {
+                            self.registers[i] = self.mem.mem[self.index_register + i];
                         }
-                        self.index_register += (x + 1) as usize;
                         self.pc += 2;
                     },
                     0x001e => {
@@ -384,6 +380,7 @@ impl Chip8 {
                         println!("{}", self.pc);
                     },
                     0x00E0 => {
+                        self.gfx.clear();
                         self.draw = true;
                         self.pc += 2;
                     },

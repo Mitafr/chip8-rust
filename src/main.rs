@@ -11,7 +11,7 @@ fn main() -> Result<(), String> {
     if args.len() > 1 {
         chip8 = Chip8::new(args[1].clone());
     } else {
-        chip8 = Chip8::new(String::from("roms/BRIX"));
+        chip8 = Chip8::new(String::from("roms/15PUZZLE"));
     }
     chip8.init()?;
     chip8.run()?;

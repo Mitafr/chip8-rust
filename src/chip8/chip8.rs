@@ -20,7 +20,6 @@ pub struct Chip8 {
     mem: Memory,
     rom: String,
     gfx: Gfx,
-    context: sdl2::Sdl,
     index_register: usize,
     events: EventPump,
     key: [bool; 16],
@@ -32,7 +31,7 @@ pub struct Chip8 {
 impl Chip8 {
     pub fn new(rom: String) -> Chip8 {
         let sdl_context: sdl2::Sdl = sdl2::init().unwrap();
-        let mut events: EventPump = sdl_context.event_pump().unwrap();
+        let events: EventPump = sdl_context.event_pump().unwrap();
         Chip8 {
             registers: [0; 16],
             delay_timer: 0,
@@ -43,7 +42,6 @@ impl Chip8 {
             mem: Memory::new(),
             rom: rom,
             gfx: Gfx::new(&sdl_context, "Test"),
-            context: sdl_context,
             events: events,
             key: [false; 16],
             wait_for_key: false,
@@ -59,7 +57,7 @@ impl Chip8 {
     }
 
     pub fn run(&mut self) -> Result<(), String> {
-        let sleep_duration = Duration::from_millis(16);
+        let sleep_duration = Duration::from_millis(1);
         'main: loop {
             for event in self.events.poll_iter() {
                 match event {
@@ -147,7 +145,6 @@ impl Chip8 {
         opcode & 0x0FFF
     }
     pub fn execute_op(&mut self, opcode: u16) {
-        self.draw = false;
         let decoded: u16 = self.decode_op(opcode);
         println!("{:x?}", opcode);
         match opcode & 0xf000 {
@@ -345,8 +342,8 @@ impl Chip8 {
                     0x0033 => {
                         let x: usize = ((opcode & 0x0F00) >> 8) as usize;
                         self.mem.mem[self.index_register] = self.registers[x] / 100;
-                        self.mem.mem[self.index_register + 1] = (self.registers[x] / 10) % 10;
-                        self.mem.mem[self.index_register + 2] = (self.registers[x] % 100) %10;
+                        self.mem.mem[self.index_register + 1] = (self.registers[x] % 100) / 10;
+                        self.mem.mem[self.index_register + 2] = self.registers[x] %10;
                         self.pc += 2;
                     },
                     0x0055 => {

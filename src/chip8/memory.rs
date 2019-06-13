@@ -1,4 +1,4 @@
-use crate::chip8::fonts::Fonts;
+use crate::chip8::fonts::FONTS;
 
 use std::fs::File;
 use std::io::prelude::*;
@@ -18,9 +18,8 @@ impl Memory {
     }
     pub fn load_rom(&mut self, filename: &str) -> Result<(), String> {
         println!("Loading : {}", filename);
-        let fonts: [u8; 5 * 16] = Fonts();
-        for i in 0..fonts.len() {
-            self.mem[i] = fonts[i];
+        for i in 0..FONTS.len() {
+            self.mem[i] = FONTS[i];
         }
         
         let mut f = File::open(filename).expect(&format!("file not found: {}", filename));

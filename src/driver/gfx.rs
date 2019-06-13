@@ -31,30 +31,23 @@ impl Gfx {
             display: [[0; SCREEN_HEIGHT as usize]; SCREEN_WIDTH as usize]
         }
     }
-    pub fn update(&mut self) {
-        self.renderer.present();
-    }
-    pub fn set_pixel(&mut self, x: u32, y: u32, pixel: u8) {
-        self.display[x as usize][y as usize] ^= 1;
+    pub fn set_pixel(&mut self, x: u32, y: u32, color: u8) {
+        self.display[x as usize][y as usize] ^= color;
     }
     pub fn draw_screen(&mut self) -> Result<(), String> {
-        self.renderer.set_draw_color(color(false));
-        for y in 0..SCREEN_HEIGHT {
-            for x in 0..SCREEN_WIDTH {
-                if self.display[x as usize][y as usize] != 0 {
-                    self.renderer.fill_rect(Rect::new(((x as u32) * SCALE) as i32, ((y as u32) * SCALE) as i32, SCALE, SCALE))?;
-                }
+        for (x, row) in self.display.iter().enumerate() {
+            for (y, &col) in row.iter().enumerate() {
+                let x = (x as u32) * SCALE;
+                let y = (y as u32) * SCALE;
+                self.renderer.set_draw_color(color(col == 0));
+                self.renderer.fill_rect(Rect::new(x as i32, y as i32, SCALE, SCALE))?;
             }
         }
         self.renderer.present();
         Ok(())
     }
     pub fn clear(&mut self) {
-        for y in 0..SCREEN_HEIGHT {
-            for x in 0..SCREEN_WIDTH {
-                self.display[x as usize][y as usize] = 0;
-            }
-        }
+        self.display = [[0; SCREEN_HEIGHT as usize]; SCREEN_WIDTH as usize];
     }
 }
 

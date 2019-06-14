@@ -1,4 +1,5 @@
 use crate::chip8::memory::Memory;
+use crate::driver::keypad::Keypad;
 use crate::driver::gfx::Gfx;
 extern crate rand;
 
@@ -22,10 +23,8 @@ pub struct Chip8 {
     gfx: Gfx,
     index_register: usize,
     events: EventPump,
-    key: [bool; 16],
-    wait_for_key: bool,
-    key_in_register: usize,
     draw: bool,
+    keypad: Keypad,
 }
 
 impl Chip8 {
@@ -43,10 +42,8 @@ impl Chip8 {
             rom: rom,
             gfx: Gfx::new(&sdl_context, "Test"),
             events: events,
-            key: [false; 16],
-            wait_for_key: false,
-            key_in_register: 0,
             draw: false,
+            keypad: Keypad::new(),
         }
     }
     pub fn init(&mut self) -> Result<(), String> {
@@ -57,7 +54,7 @@ impl Chip8 {
     }
 
     pub fn run(&mut self) -> Result<(), String> {
-        let sleep_duration = Duration::from_millis(16);
+        let sleep_duration = Duration::from_millis(1);
         'main: loop {
             for event in self.events.poll_iter() {
                 match event {
@@ -65,65 +62,11 @@ impl Chip8 {
                     Event::KeyDown {keycode: Some(keycode), ..} => {
                         match keycode {
                             Keycode::Escape => break 'main,
-                            Keycode::A => self.key[0] = true,
-                            Keycode::Z => self.key[1] = true,
-                            Keycode::E => self.key[2] = true,
-                            Keycode::R => self.key[3] = true,
-                            Keycode::T => self.key[4] = true,
-                            Keycode::Y => self.key[5] = true,
-                            Keycode::U => self.key[6] = true,
-                            Keycode::I => self.key[7] = true,
-                            Keycode::O => self.key[8] = true,
-                            Keycode::P => self.key[9] = true,
-                            Keycode::Num0 => self.key[10] = true,
-                            Keycode::Num1 => self.key[11] = true,
-                            Keycode::Num2 => self.key[12] = true,
-                            Keycode::Num3 => self.key[13] = true,
-                            Keycode::Num4 => self.key[14] = true,
-                            Keycode::Num5 => self.key[15] = true,
-                            _ => {}
+                            _ => self.keypad.press(keycode, true),
                         }
                     }
-                    Event::KeyUp {keycode: Some(keycode), ..} => {
-                        match keycode {
-                            Keycode::A => self.key[0] = false,
-                            Keycode::Z => self.key[1] = false,
-                            Keycode::E => self.key[2] = false,
-                            Keycode::R => self.key[3] = false,
-                            Keycode::T => self.key[4] = false,
-                            Keycode::Y => self.key[5] = false,
-                            Keycode::U => self.key[6] = false,
-                            Keycode::I => self.key[7] = false,
-                            Keycode::O => self.key[8] = false,
-                            Keycode::P => self.key[9] = false,
-                            Keycode::Num0 => self.key[10] = false,
-                            Keycode::Num1 => self.key[11] = false,
-                            Keycode::Num2 => self.key[12] = false,
-                            Keycode::Num3 => self.key[13] = false,
-                            Keycode::Num4 => self.key[14] = false,
-                            Keycode::Num5 => self.key[15] = false,
-                            _ => {}
-                        }
-                    }
+                    Event::KeyUp {keycode: Some(keycode), ..} => self.keypad.press(keycode, false),
                     _ => {}
-                }
-            }
-            if !self.wait_for_key {
-                let opcode = self.fetch_op();
-                self.execute_op(opcode);
-                while self.delay_timer > 0 {
-                    self.delay_timer -= 1;
-                }
-                while self.sound_timer > 0 {
-                    self.sound_timer -= 1;
-                }
-            } else {
-                for i in 0..self.key.len() {
-                    if self.key[i] {
-                        self.wait_for_key = false;
-                        self.registers[self.key_in_register as usize] = i as u8;
-                        break;
-                    }
                 }
             }
             if self.draw {
@@ -134,16 +77,33 @@ impl Chip8 {
                 }
                 self.draw = false;
             }
+            let opcode = self.fetch_op();
+            self.execute_op(opcode);
+            while self.delay_timer > 0 {
+                self.delay_timer -= 1;
+            }
+            while self.sound_timer > 0 {
+                self.sound_timer -= 1;
+            }
             thread::sleep(sleep_duration);
         }
         Ok(())
+    }
+    fn wait_keypress(&mut self, x: usize) {
+        for i in  0..15 {
+            if self.keypad.is_pressed(i as usize) {
+                println!("{}", i);
+                self.registers[x] = i as u8;
+                break;
+            }
+        }
     }
     pub fn fetch_op(&mut self) -> u16 {
         (self.mem.mem[self.pc] as u16) << 8 | (self.mem.mem[self.pc + 1] as u16)
     }
     pub fn execute_op(&mut self, opcode: u16) {
         let decoded: u16 = opcode & 0x0FFF;
-        println!("Current opcode: {:x?}", opcode);
+        println!("{:x?}", opcode);
         let n: u8 = (opcode & 0x000F) as u8;
         let kk: u8 = (opcode & 0x00FF) as u8;
         let x: usize = ((opcode & 0x0F00) >> 8) as usize;
@@ -153,7 +113,7 @@ impl Chip8 {
                 self.pc = decoded as usize;
             },
             0x2000 => {
-                self.stack.push((self.pc + 2) as u16);
+                self.stack.push((self.pc) as u16);
                 self.pc = decoded as usize;
             },
             0x3000 => {
@@ -170,8 +130,7 @@ impl Chip8 {
                 self.pc += 2;
             },
             0x7000 => {
-                let vx = self.registers[x];
-                self.registers[x] = (vx + kk) as u8;
+                self.registers[x] = self.registers[x].wrapping_add(kk);
                 self.pc += 2;
             },
             0x8000 => {
@@ -193,14 +152,16 @@ impl Chip8 {
                         self.pc += 2;
                     }
                     0x0004 => {
-                        let res: u16 = (self.registers[x] + self.registers[y]) as u16;
-                        self.registers[x] = res as u8;
+                        let vx = self.registers[x] as u16;
+                        let vy = self.registers[y] as u16;
+                        let res = vx + vy;
+                        self.registers[x] = self.registers[x].wrapping_add(self.registers[y]);
                         self.registers[0x0F] = if res > 0xFF { 1 } else { 0 };
                         self.pc += 2;
                     }
                     0x0005 => {
                         self.registers[0x0F] = if self.registers[x] > self.registers[y] { 1 } else { 0 };
-                        self.registers[x] -= self.registers[y];
+                        self.registers[x] = self.registers[x].wrapping_sub(self.registers[y]);
                         self.pc += 2;
                     }
                     0x0006 => {
@@ -210,7 +171,7 @@ impl Chip8 {
                     }
                     0x0007 => {
                         self.registers[0x0F] = if self.registers[x] > self.registers[y] { 0 } else { 1 };
-                        self.registers[x] = self.registers[y] - self.registers[x];
+                        self.registers[x] = self.registers[y].wrapping_sub(self.registers[x]);
                         self.pc += 2;
                     }
                     0x000E => {
@@ -227,11 +188,11 @@ impl Chip8 {
                 self.pc += if self.registers[x] != self.registers[y] { 4 } else { 2 };
             }
             0xA000 => {
-                self.index_register = (opcode & 0x0FFF) as usize;
+                self.index_register = decoded as usize;
                 self.pc += 2;
             },
             0xB000 => {
-                self.index_register = (decoded + self.registers[0] as u16) as usize;
+                self.pc = (decoded + self.registers[0] as u16) as usize;
             }
             0xC000 => {
                 let mut rng = rand::thread_rng();
@@ -259,18 +220,8 @@ impl Chip8 {
             },
             0xE000 => {
                 match opcode & 0x00FF {
-                    0x009E => {
-                        self.pc += 2;
-                        if self.key[x] {
-                            self.pc += 4;
-                        }
-                    }
-                    0x00A1 => {
-                        self.pc += 2;
-                        if !self.key[x] {
-                            self.pc += 2;
-                        }
-                    }
+                    0x009E => self.pc += if self.keypad.is_pressed(x) { 4 } else { 2 },
+                    0x00A1 => self.pc += if !self.keypad.is_pressed(x) { 4 } else { 2 },
                     _ => {}
                 }
             }
@@ -281,9 +232,8 @@ impl Chip8 {
                         self.pc += 2;
                     }
                     0x000A => {
-                        self.wait_for_key = true;
-                        self.key_in_register = x;
-                        self.pc -= 2;
+                        self.wait_keypress(x);
+                        self.pc += 2;
                     },
                     0x0015 => {
                         self.delay_timer = self.registers[x];
@@ -294,13 +244,13 @@ impl Chip8 {
                         self.pc += 2;
                     }
                     0x0029 => {
-                        self.index_register = (self.registers[x] as usize) * 5;
+                        self.index_register = (self.registers[x] as usize) * 0x5;
                         self.pc += 2;
                     },
                     0x0033 => {
                         self.mem.mem[self.index_register] = self.registers[x] / 100;
                         self.mem.mem[self.index_register + 1] = (self.registers[x] % 100) / 10;
-                        self.mem.mem[self.index_register + 2] = self.registers[x] %10;
+                        self.mem.mem[self.index_register + 2] = self.registers[x] % 10;
                         self.pc += 2;
                     },
                     0x0055 => {
@@ -317,6 +267,7 @@ impl Chip8 {
                     },
                     0x001e => {
                         self.index_register += self.registers[x] as usize;
+                        self.registers[0x0F] = if self.index_register > 0x0F00 { 1 } else { 0 };
                         self.pc += 2;
                     }  
                     _ => {
@@ -328,6 +279,7 @@ impl Chip8 {
                 match opcode {
                     0x00EE => {
                         self.pc = self.stack.pop().unwrap() as usize;
+                        self.pc += 2;
                     },
                     0x00E0 => {
                         self.gfx.clear();

@@ -8,7 +8,7 @@ use std::fmt;
 
 const SCREEN_WIDTH: u32 = 64;
 const SCREEN_HEIGHT: u32 = 32;
-const SCALE: u32 = 20;
+const SCALE: u32 = 8;
 
 pub struct Gfx {
     renderer: Canvas<Window>,

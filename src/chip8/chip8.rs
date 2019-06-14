@@ -57,7 +57,7 @@ impl Chip8 {
     }
 
     pub fn run(&mut self) -> Result<(), String> {
-        let sleep_duration = Duration::from_millis(1);
+        let sleep_duration = Duration::from_millis(16);
         'main: loop {
             for event in self.events.poll_iter() {
                 match event {
@@ -141,107 +141,79 @@ impl Chip8 {
     pub fn fetch_op(&mut self) -> u16 {
         (self.mem.mem[self.pc] as u16) << 8 | (self.mem.mem[self.pc + 1] as u16)
     }
-    pub fn decode_op(&mut self, opcode: u16) -> u16 {
-        opcode & 0x0FFF
-    }
     pub fn execute_op(&mut self, opcode: u16) {
-        let decoded: u16 = self.decode_op(opcode);
-        println!("{:x?}", opcode);
+        let decoded: u16 = opcode & 0x0FFF;
+        println!("Current opcode: {:x?}", opcode);
+        let n: u8 = (opcode & 0x000F) as u8;
+        let kk: u8 = (opcode & 0x00FF) as u8;
+        let x: usize = ((opcode & 0x0F00) >> 8) as usize;
+        let y: usize = ((opcode & 0x00F0) >> 4) as usize;
         match opcode & 0xf000 {
             0x1000 => {
-                self.pc = (opcode & 0x0FFF) as usize;
+                self.pc = decoded as usize;
             },
             0x2000 => {
                 self.stack.push((self.pc + 2) as u16);
-                self.pc = (opcode & 0x0FFF) as usize;
+                self.pc = decoded as usize;
             },
             0x3000 => {
-                let x: usize = ((opcode & 0x0F00) >> 8) as usize;
-                let kk: u8 = (opcode & 0x00FF) as u8;
                 self.pc += if self.registers[x] == kk { 4 } else { 2 };
             },
             0x4000 => {
-                let x: usize = ((opcode & 0x0F00) >> 8) as usize;
-                let kk: u8 = (opcode & 0x00FF) as u8;
                 self.pc += if self.registers[x] != kk { 4 } else { 2 };
             },
             0x5000 => {
-                let x: usize = ((opcode & 0x0F00) >> 8) as usize;
-                let y: usize = ((opcode & 0x00F0) >> 4) as usize;
                 self.pc += if self.registers[x] == self.registers[y] { 4 } else { 2 };
             },
             0x6000 => {
-                let x: usize = ((opcode & 0x0F00) >> 8) as usize;
-                let nn: u8 = (opcode & 0x00FF) as u8;
-                self.registers[x] = nn;
+                self.registers[x] = kk;
                 self.pc += 2;
             },
             0x7000 => {
-                //Adds the value kk to the value of register Vx, then stores the result in Vx. 
-                let x: usize = ((opcode & 0x0F00) >> 8) as usize;
-                let vx = self.registers[x] as u16;
-                let nn: u8 = (opcode & 0x00FF) as u8;
-                let val = nn as u16;
-                let result = vx + val;
-                self.registers[x] = result as u8;
+                let vx = self.registers[x];
+                self.registers[x] = (vx + kk) as u8;
                 self.pc += 2;
             },
             0x8000 => {
                 match opcode & 0x000F {
                     0x0000 => {
-                        let x: usize = ((opcode & 0x0F00) >> 8) as usize;
-                        let y: usize = ((opcode & 0x00F0) >> 4) as usize;
                         self.registers[x] = self.registers[y];
                         self.pc += 2;
                     }
                     0x0001 => {
-                        let x: usize = ((opcode & 0x0F00) >> 8) as usize;
-                        let y: usize = ((opcode & 0x00F0) >> 4) as usize;
                         self.registers[x] |= self.registers[y];
                         self.pc += 2;
                     }
                     0x0002 => {
-                        let x: usize = ((opcode & 0x0F00) >> 8) as usize;
-                        let y: usize = ((opcode & 0x00F0) >> 4) as usize;
                         self.registers[x] &= self.registers[y];
                         self.pc += 2;
                     }
                     0x0003 => {
-                        let x: usize = ((opcode & 0x0F00) >> 8) as usize;
-                        let y: usize = ((opcode & 0x00F0) >> 4) as usize;
                         self.registers[x] ^= self.registers[y];
                         self.pc += 2;
                     }
                     0x0004 => {
-                        let x: usize = ((opcode & 0x0F00) >> 8) as usize;
-                        let y: usize = ((opcode & 0x00F0) >> 4) as usize;
                         let res: u16 = (self.registers[x] + self.registers[y]) as u16;
                         self.registers[x] = res as u8;
                         self.registers[0x0F] = if res > 0xFF { 1 } else { 0 };
                         self.pc += 2;
                     }
                     0x0005 => {
-                        let x: usize = ((opcode & 0x0F00) >> 8) as usize;
-                        let y: usize = ((opcode & 0x00F0) >> 4) as usize;
                         self.registers[0x0F] = if self.registers[x] > self.registers[y] { 1 } else { 0 };
                         self.registers[x] -= self.registers[y];
                         self.pc += 2;
                     }
                     0x0006 => {
-                        let x: usize = ((opcode & 0x0F00) >> 8) as usize;
                         self.registers[0x0F] = self.registers[x] & 0x1;
                         self.registers[x] >>= 1;
                         self.pc += 2;
                     }
                     0x0007 => {
-                        let x: usize = ((opcode & 0x0F00) >> 8) as usize;
-                        let y: usize = ((opcode & 0x00F0) >> 4) as usize;
                         self.registers[0x0F] = if self.registers[x] > self.registers[y] { 0 } else { 1 };
                         self.registers[x] = self.registers[y] - self.registers[x];
                         self.pc += 2;
                     }
                     0x000E => {
-                        let x: usize = ((opcode & 0x0F00) >> 8) as usize;
                         self.registers[0xF] = self.registers[x] >> 7;
                         self.registers[x] <<= 1;
                         self.pc += 2;
@@ -252,8 +224,6 @@ impl Chip8 {
                 }
             },
             0x9000 => {
-                let x: usize = ((opcode & 0x0F00) >> 8) as usize;
-                let y: usize = ((opcode & 0x00F0) >> 4) as usize;
                 self.pc += if self.registers[x] != self.registers[y] { 4 } else { 2 };
             }
             0xA000 => {
@@ -265,16 +235,11 @@ impl Chip8 {
             }
             0xC000 => {
                 let mut rng = rand::thread_rng();
-                let x: usize = ((opcode & 0x0F00) >> 8) as usize;
-                let kk: u8 = (opcode & 0x00FF) as u8;
                 let random: u8 = rng.gen_range(0, 255);
                 self.registers[x] = kk & random;
                 self.pc += 2;
             }
             0xD000 => {
-                let n: u8 = (opcode & 0x000F) as u8;
-                let x = (opcode & 0x0F00) >> 8;
-                let y = (opcode & 0x00F0) >> 4;
                 let mut pixel: u8;
                 self.registers[0xF] = 0;
                 for i in 0..n {
@@ -296,15 +261,13 @@ impl Chip8 {
                 match opcode & 0x00FF {
                     0x009E => {
                         self.pc += 2;
-                        let x = (opcode & 0x0F00) >> 8;
-                        if self.key[x as usize] {
+                        if self.key[x] {
                             self.pc += 4;
                         }
                     }
                     0x00A1 => {
                         self.pc += 2;
-                        let x = (opcode & 0x0F00) >> 8;
-                        if !self.key[x as usize] {
+                        if !self.key[x] {
                             self.pc += 2;
                         }
                     }
@@ -314,54 +277,45 @@ impl Chip8 {
             0xF000 => {
                 match opcode & 0x00FF {
                     0x0007 => {
-                        let x: usize = ((opcode & 0x0F00) >> 8) as usize;
                         self.registers[x] = self.delay_timer;
                         self.pc += 2;
                     }
                     0x000A => {
-                        let x: u8 = ((opcode & 0x0F00) >> 8) as u8;
                         self.wait_for_key = true;
-                        self.key_in_register = x as usize;
+                        self.key_in_register = x;
                         self.pc -= 2;
                     },
                     0x0015 => {
-                        let x: usize = ((opcode & 0x0F00) >> 8) as usize;
                         self.delay_timer = self.registers[x];
                         self.pc += 2;
                     }
                     0x0018 => {
-                        let x: usize = ((opcode & 0x0F00) >> 8) as usize;
                         self.sound_timer = self.registers[x];
                         self.pc += 2;
                     }
                     0x0029 => {
-                        let x: usize = ((opcode & 0x0F00) >> 8) as usize;
                         self.index_register = (self.registers[x] as usize) * 5;
                         self.pc += 2;
                     },
                     0x0033 => {
-                        let x: usize = ((opcode & 0x0F00) >> 8) as usize;
                         self.mem.mem[self.index_register] = self.registers[x] / 100;
                         self.mem.mem[self.index_register + 1] = (self.registers[x] % 100) / 10;
                         self.mem.mem[self.index_register + 2] = self.registers[x] %10;
                         self.pc += 2;
                     },
                     0x0055 => {
-                        let x: usize = ((opcode & 0x0F00) >> 8) as usize;
                         for i in 0..x + 1 {
                             self.mem.mem[self.index_register + i] = self.registers[i]
                         }
                         self.pc += 2;
                     },
                     0x0065 => {
-                        let x: usize = ((opcode & 0x0F00) >> 8) as usize;
                         for i in 0..x + 1 {
                             self.registers[i] = self.mem.mem[self.index_register + i];
                         }
                         self.pc += 2;
                     },
                     0x001e => {
-                        let x: usize = ((opcode & 0x0F00) >> 8) as usize;
                         self.index_register += self.registers[x] as usize;
                         self.pc += 2;
                     }  
@@ -374,7 +328,6 @@ impl Chip8 {
                 match opcode {
                     0x00EE => {
                         self.pc = self.stack.pop().unwrap() as usize;
-                        println!("{}", self.pc);
                     },
                     0x00E0 => {
                         self.gfx.clear();

@@ -189,9 +189,9 @@ impl Chip8 {
                 for i in 0..n {
                     pixel = self.mem.get_mem(self.index_register + i as usize);
                     for j in 0..8 {
-                        let y1 = self.registers[y as usize].wrapping_add(i);
+                        let y1 = self.registers[y as usize].wrapping_add(i) % 64;
                         if (pixel & (0x80 >> j)) != 0 {
-                            let x1 = self.registers[x as usize].wrapping_add(j);
+                            let x1 = self.registers[x as usize].wrapping_add(j) % 64;
                             let color = (self.mem.get_mem(self.index_register + i as usize) >> (7 - j)) & 1;
                             self.registers[0xF] = if self.gfx.has_pixel(x1 as usize, y1 as usize) { 1 } else { 0 };
                             self.gfx.set_pixel(x1 as u32, y1 as u32, color);

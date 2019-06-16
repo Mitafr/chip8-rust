@@ -15,22 +15,22 @@ impl Keypad {
     }
     pub fn press(&mut self, keycode: Keycode, state: bool) {
         match keycode {
-            Keycode::A => self.keys[0] = state,
-            Keycode::Z => self.keys[1] = state,
-            Keycode::E => self.keys[2] = state,
-            Keycode::R => self.keys[3] = state,
-            Keycode::T => self.keys[4] = state,
-            Keycode::Y => self.keys[5] = state,
-            Keycode::U => self.keys[6] = state,
-            Keycode::I => self.keys[7] = state,
-            Keycode::O => self.keys[8] = state,
-            Keycode::P => self.keys[9] = state,
-            Keycode::Q => self.keys[10] = state,
-            Keycode::S => self.keys[11] = state,
-            Keycode::D => self.keys[12] = state,
-            Keycode::F => self.keys[13] = state,
-            Keycode::G => self.keys[14] = state,
-            Keycode::H => self.keys[15] = state,
+            Keycode::A => self.keys[0x0] = state,
+            Keycode::Z => self.keys[0x1] = state,
+            Keycode::E => self.keys[0x2] = state,
+            Keycode::R => self.keys[0x3] = state,
+            Keycode::Q => self.keys[0x4] = state,
+            Keycode::Y => self.keys[0x5] = state,
+            Keycode::D => self.keys[0x6] = state,
+            Keycode::I => self.keys[0x7] = state,
+            Keycode::O => self.keys[0x8] = state,
+            Keycode::P => self.keys[0x9] = state,
+            Keycode::T => self.keys[0xA] = state,
+            Keycode::S => self.keys[0xB] = state,
+            Keycode::B => self.keys[0xC] = state,
+            Keycode::F => self.keys[0xD] = state,
+            Keycode::G => self.keys[0xE] = state,
+            Keycode::H => self.keys[0xF] = state,
             _ => {}
         }
     }

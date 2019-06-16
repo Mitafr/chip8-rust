@@ -8,11 +8,12 @@ use std::env;
 fn main() -> Result<(), String> {
     let args: Vec<String> = env::args().collect();
     let mut chip8: Chip8;
-    if args.len() > 1 {
-        chip8 = Chip8::new(args[1].clone());
-    } else {
-        chip8 = Chip8::new(String::from("roms/15PUZZLE"));
+    println!("{}", args.len());
+    if args.len() < 2 {
+        println!("Usage: ./chip8 /filename where filename is the path of your rom");
+        panic!("No rom");
     }
+    chip8 = Chip8::new(args[1].clone());
     chip8.init()?;
     chip8.run()?;
     Ok(())

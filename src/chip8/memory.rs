@@ -1,8 +1,8 @@
 use crate::chip8::fonts::FONTS;
 
 use std::fs::File;
-use std::io::prelude::*;
 use std::fmt;
+use std::io::prelude::*;
 
 pub struct Memory {
     pub mem: [u8; 4096],
@@ -15,6 +15,12 @@ impl Memory {
             mem: [0; 4096],
             size: 0,
         }
+    }
+    pub fn get_mem(&mut self, i: usize) -> u8 {
+        self.mem[i]
+    }
+    pub fn set_mem(&mut self, i: usize, value: u8) {
+        self.mem[i] = value;
     }
     pub fn load_rom(&mut self, filename: &str) -> Result<(), String> {
         println!("Loading : {}", filename);

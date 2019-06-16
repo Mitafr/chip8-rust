@@ -1,18 +1,18 @@
 use sdl2;
-use sdl2::render::Canvas;
 use sdl2::pixels;
-use sdl2::video::Window;
 use sdl2::rect::{Rect};
+use sdl2::render::Canvas;
+use sdl2::video::Window;
 
 use std::fmt;
 
-const SCREEN_WIDTH: u32 = 64;
+const SCALE: u32 = 20;
 const SCREEN_HEIGHT: u32 = 32;
-const SCALE: u32 = 8;
+const SCREEN_WIDTH: u32 = 64;
 
 pub struct Gfx {
     renderer: Canvas<Window>,
-    pub display: [[u8; SCREEN_HEIGHT as usize]; SCREEN_WIDTH as usize],
+    display: [[u8; SCREEN_HEIGHT as usize]; SCREEN_WIDTH as usize],
 }
 
 impl Gfx {
@@ -31,20 +31,27 @@ impl Gfx {
             display: [[0; SCREEN_HEIGHT as usize]; SCREEN_WIDTH as usize]
         }
     }
+    pub fn has_pixel(&mut self, x: usize, y: usize) -> bool {
+        self.display[x][y] != 0
+    }
     pub fn set_pixel(&mut self, x: u32, y: u32, color: u8) {
         self.display[x as usize][y as usize] ^= color;
     }
-    pub fn draw_screen(&mut self) -> Result<(), String> {
+    pub fn draw_screen(&mut self) {
         for (x, row) in self.display.iter().enumerate() {
             for (y, &col) in row.iter().enumerate() {
                 let x = (x as u32) * SCALE;
                 let y = (y as u32) * SCALE;
                 self.renderer.set_draw_color(color(col == 0));
-                self.renderer.fill_rect(Rect::new(x as i32, y as i32, SCALE, SCALE))?;
+                match self.renderer.fill_rect(Rect::new(x as i32, y as i32, SCALE, SCALE)) {
+                    Err(s) => {
+                        println!("Draw error: {}", s);
+                    }
+                    _ => {}
+                }
             }
         }
         self.renderer.present();
-        Ok(())
     }
     pub fn clear(&mut self) {
         self.display = [[0; SCREEN_HEIGHT as usize]; SCREEN_WIDTH as usize];

@@ -82,7 +82,12 @@ impl Chip8 {
                     self.delay_timer -= 1;
                 }
                 while self.sound_timer > 0 {
+                    println!("{}", self.sound_timer);
+                    self.audio.beep_play();
                     self.sound_timer -= 1;
+                }
+                if self.sound_timer == 0 {
+                    self.audio.beep_stop();
                 }
             }
             thread::sleep(sleep_duration);

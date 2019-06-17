@@ -1,35 +1,35 @@
 extern crate rand;
 
 use sdl2;
-use sdl2::AudioSubsystem;
 use sdl2::audio::{AudioCallback, AudioSpecDesired, AudioDevice};
-use std::time::Duration;
 
 const FREQUENCY: i32 = 44100;
 const CHANNEL: u8 = 1;
 
 
-struct MyCallback {
+struct SquareWave {
+    phase_inc: f32,
+    phase: f32,
     volume: f32
 }
-impl AudioCallback for MyCallback {
+
+impl AudioCallback for SquareWave {
     type Channel = f32;
 
     fn callback(&mut self, out: &mut [f32]) {
-        use self::rand::{Rng, thread_rng};
-        let mut rng = thread_rng();
-
-        // Generate white noise
+        // Generate a square wave
         for x in out.iter_mut() {
-            *x = (rng.gen_range(0.0, 2.0) - 1.0) * self.volume;
+            *x = if self.phase <= 0.5 {
+                self.volume
+            } else {
+                -self.volume
+            };
+            self.phase = (self.phase + self.phase_inc) % 1.0;
         }
     }
 }
-
 pub struct Audio {
-    subsytem: AudioSubsystem,
-    spec: AudioSpecDesired,
-    device: AudioDevice<MyCallback>,
+    device: AudioDevice<SquareWave>,
 }
 
 impl Audio {
@@ -41,17 +41,23 @@ impl Audio {
             samples: Some(2048)
         };
         let device = audio_subsys.open_playback(None, &desired_spec, |spec| {
-            println!("{:?}", spec);
-
-            MyCallback { volume: 0.5 }
+            SquareWave {
+                phase_inc: 440.0 / spec.freq as f32,
+                phase: 0.0,
+                volume: 0.10
+            }
         }).unwrap();
+
         Audio {
-            subsytem: audio_subsys,
-            spec: desired_spec,
             device: device,
         }
     }
-    pub fn beep(&mut self) {
-        self.device.resume()
+    pub fn beep_play(&mut self) {
+        if self.device.status() != sdl2::audio::AudioStatus::Playing {
+            self.device.resume();
+        }
+    }
+    pub fn beep_stop(&mut self) {
+        self.device.pause();
     }
 }

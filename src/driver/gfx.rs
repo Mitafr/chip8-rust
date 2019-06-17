@@ -6,7 +6,7 @@ use sdl2::video::Window;
 
 use std::fmt;
 
-const SCALE: u32 = 20;
+const SCALE: u32 = 6;
 const SCREEN_HEIGHT: u32 = 32;
 const SCREEN_WIDTH: u32 = 64;
 

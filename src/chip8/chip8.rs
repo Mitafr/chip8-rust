@@ -1,6 +1,7 @@
 use crate::chip8::memory::Memory;
-use crate::driver::keypad::Keypad;
+use crate::driver::audio::Audio;
 use crate::driver::gfx::Gfx;
+use crate::driver::keypad::Keypad;
 extern crate rand;
 
 use rand::Rng;
@@ -25,6 +26,7 @@ pub struct Chip8 {
     rom: String,
     sound_timer: u8,
     stack: Vec<u16>,
+    audio: Audio,
 }
 
 impl Chip8 {
@@ -44,6 +46,7 @@ impl Chip8 {
             rom: rom,
             sound_timer: 0,
             stack: Vec::new(),
+            audio: Audio::new(&sdl_context),
         }
     }
     pub fn init(&mut self) -> Result<(), String> {

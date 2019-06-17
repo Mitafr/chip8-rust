@@ -28,7 +28,7 @@ impl Gfx {
         let canvas = window.into_canvas().build().map_err(|e| e.to_string()).unwrap();
         Gfx {
             renderer: canvas,
-            display: [[0; SCREEN_HEIGHT as usize]; SCREEN_WIDTH as usize]
+            display: [[0; SCREEN_HEIGHT as usize]; SCREEN_WIDTH as usize],
         }
     }
     pub fn has_pixel(&mut self, x: usize, y: usize) -> bool {
@@ -54,7 +54,7 @@ impl Gfx {
         self.renderer.present();
     }
     pub fn clear(&mut self) {
-        self.display = [[0; SCREEN_HEIGHT as usize]; SCREEN_WIDTH as usize];
+        self.display = [[0u8; SCREEN_HEIGHT as usize]; SCREEN_WIDTH as usize];
     }
 }
 

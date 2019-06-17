@@ -30,7 +30,7 @@ impl Memory {
         
         let mut f = File::open(filename).expect(&format!("file not found: {}", filename));
         let mut buffer = [0u8; 3584];
-        let bytes_read = if let Ok(bytes_read) = f.read(&mut buffer) {
+        if let Ok(bytes_read) = f.read(&mut buffer) {
             bytes_read
         } else {
             0
@@ -42,8 +42,6 @@ impl Memory {
                 self.mem[i + 512] = bit;
             }
         }
-        self.size = bytes_read;
-
         Ok(())
     }
 }
@@ -51,7 +49,7 @@ impl Memory {
 
 impl fmt::Display for Memory {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        writeln!(f, "{}", self.size)?;
+        writeln!(f, "Size: {}", self.size)?;
         for (i, b) in self.mem.iter().enumerate() {
             if i >= 0x200 && i <= 0x200 + self.size {
                 write!(f, "{:x?} ", b)?;

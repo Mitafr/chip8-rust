@@ -8,7 +8,6 @@ use std::env;
 fn main() -> Result<(), String> {
     let args: Vec<String> = env::args().collect();
     let mut chip8: Chip8;
-    println!("{}", args.len());
     if args.len() < 2 {
         println!("Usage: ./chip8 /filename where filename is the path of your rom");
         panic!("No rom");

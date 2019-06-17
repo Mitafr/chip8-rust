@@ -242,19 +242,16 @@ impl Chip8 {
             },
             0x0000 => {
                 match opcode {
-                    0x00EE => {
-                        self.pc = self.stack.pop().unwrap() as usize;
-                        self.pc += 2;
-                    },
+                    0x00EE => self.pc = self.stack.pop().unwrap() as usize,
                     0x00E0 => {
                         self.gfx.clear();
                         self.draw = true;
-                        self.pc += 2;
                     },
                     _ => {
                         println!("Unrecognized opcode : {:x?}", opcode & 0xf000);
                     }
                 }
+                self.pc += 2;
             }
             _ => {
                 println!("Unrecognized opcode : {:x?}", opcode & 0xf000);
